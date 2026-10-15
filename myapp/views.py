@@ -1,39 +1,44 @@
-from django.shortcuts import render
-from rest_framework.views import APIView
+from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from rest_framework.status import HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_200_OK
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.authtoken.models import Token
+from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from .serializers import RegisterSerializer
-from django.contrib.auth import authenticate
 
 
-class RegisterAPIView(APIView):
+class RegisterAPIView(generics.CreateAPIView):
+    serializer_class = RegisterSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class LogoutAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            token, _ = Token.objects.get_or_create(user=user)
-            return Response({'token':token.key})
-        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+        refresh_token = request.data.get('refresh')
+        if not refresh_token:
+            return Response(
+                {'detail': 'Refresh token is required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
+        try:
+            RefreshToken(refresh_token).blacklist()
+        except TokenError:
+            return Response(
+                {'detail': 'Invalid token'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-class LoginAPIViw(APIView):
-    def post(self,request):
-        username = request.data.get('username')
-        password= request.data.get('password')
-        user = authenticate(username=username, password=password)
-        if user:
-            token, _=Token.objects.get_or_create(user=user)
-            return Response({'token':token.key}, status=HTTP_200_OK)
-        return Response({'error':"incvalid credentials"}, status=HTTP_400_BAD_REQUEST)
+        return Response(
+            {'detail': 'Logout successful'},
+            status=status.HTTP_205_RESET_CONTENT,
+        )
 
 
 class ProfileAPIView(APIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes=[IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request):
-        return Response({'user':request.user.username})
-
-
+        return Response({'user': request.user.username})

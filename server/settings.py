@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'rest_framework.authtoken', 
+    'rest_framework_simplejwt.token_blacklist',
     'myapp',
     'drf_yasg',
     
@@ -46,21 +46,31 @@ INSTALLED_APPS = [
 
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
-        'Token': {
+        'Bearer': {
             'type': 'apiKey',
             'name': 'Authorization',
-            'in': 'header'
+            'in': 'header',
+            'description': 'JWT Authorization header using the Bearer scheme. Example: "Bearer <token>"',
         }
-    }
+    },
+    'USE_SESSION_AUTH': False,
 }
+
 
 
 AUTH_USER_MODEL = 'myapp.CustomUser'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ]
+}
+
+from datetime import timedelta
+
+SIMPLE_JWT={
+    'ACCESS_TOKEN_LIFETIME':timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME':timedelta(days=1)
 }
 
 MIDDLEWARE = [
